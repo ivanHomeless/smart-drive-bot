@@ -96,6 +96,9 @@ dmypy.json
 scripts/__pycache__/
 tests/__pycache__/
 .claude/
+
+# Project Files
+debugs_data/
 IMPLEMENTATION_PLAN.md
 PRD_SmartDrive_Bot.md
-Capture.PNG
+
