@@ -14,6 +14,7 @@ from src.bot.middlewares.logging_mw import LoggingMiddleware
 from src.bot.middlewares.throttling import ThrottlingMiddleware
 from src.config import settings
 from src.db.engine import async_session
+from src.services.openai_client import OpenAIClient
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,15 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
-    dp = Dispatcher(storage=storage)
+    # OpenAI client (injected into handlers as "openai_client" kwarg)
+    openai_client = None
+    if settings.OPENAI_API_KEY:
+        openai_client = OpenAIClient()
+        logger.info("OpenAI client initialized (model=%s)", settings.OPENAI_MODEL)
+    else:
+        logger.warning("OPENAI_API_KEY not set, freetext AI will be unavailable")
+
+    dp = Dispatcher(storage=storage, openai_client=openai_client)
 
     dp.update.middleware(LoggingMiddleware())
     dp.update.middleware(ThrottlingMiddleware())

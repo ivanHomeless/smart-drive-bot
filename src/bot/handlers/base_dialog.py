@@ -128,6 +128,13 @@ class BaseDialogHandler:
             group_filter,
         )
 
+        # Accept pre-filled value (AI pre-fill) — for all steps
+        self.router.callback_query.register(
+            self._on_accept_prefill,
+            F.data.endswith(":__accept__"),
+            group_filter,
+        )
+
         # Per-step handlers
         for step in self.steps:
             if step.step_type == StepType.BUTTON_SELECT:
@@ -189,7 +196,14 @@ class BaseDialogHandler:
 
     async def _on_entry(self, callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer()
+        # Preserve pre-filled data from AI suggestion
+        existing_data = await state.get_data()
         await state.clear()
+        if existing_data:
+            # Re-store non-internal keys (AI pre-fill values like car_brand, year, etc.)
+            prefill = {k: v for k, v in existing_data.items() if not k.startswith("__")}
+            if prefill:
+                await state.update_data(**prefill)
         await self._send_step(callback.message, state, 0)
 
     # ------------------------------------------------------------------
@@ -207,14 +221,20 @@ class BaseDialogHandler:
         step = self.steps[step_index]
         await state.set_state(step.state)
 
-        keyboard = self._build_step_keyboard(step, step_index)
         text = step.prompt_text
 
         # Check if we have a pre-filled value from AI
         data = await state.get_data()
+        editing = data.get("__editing_field__")
         prefilled = data.get(step.key)
-        if prefilled and step.key != "__editing_field__":
+        has_prefill = False
+        if prefilled and not editing and step.step_type in (
+            StepType.TEXT_INPUT, StepType.BUTTON_SELECT,
+        ):
             text += f"\n\nТекущее значение: {prefilled}"
+            has_prefill = True
+
+        keyboard = self._build_step_keyboard(step, step_index, has_prefill=has_prefill)
 
         if edit:
             await target.edit_text(text, reply_markup=keyboard)
@@ -233,9 +253,19 @@ class BaseDialogHandler:
                 await target.answer(text, reply_markup=keyboard)
 
     def _build_step_keyboard(
-        self, step: StepConfig, step_index: int
+        self, step: StepConfig, step_index: int, *, has_prefill: bool = False
     ) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
+
+        # "Accept" button for pre-filled values from AI
+        if has_prefill:
+            builder.add(
+                InlineKeyboardButton(
+                    text="Принять",
+                    callback_data=f"step:{step.key}:__accept__",
+                )
+            )
+            builder.adjust(1)
 
         if step.buttons and step.step_type in (StepType.BUTTON_SELECT, StepType.TEXT_INPUT):
             for label, value in step.buttons:
@@ -418,6 +448,23 @@ class BaseDialogHandler:
         await callback.message.edit_text(WELCOME_TEXT, reply_markup=get_main_menu_keyboard())
 
     # ------------------------------------------------------------------
+    # Accept pre-filled value
+    # ------------------------------------------------------------------
+
+    async def _on_accept_prefill(self, callback: CallbackQuery, state: FSMContext) -> None:
+        """Accept a pre-filled value from AI and advance."""
+        await callback.answer()
+        # callback_data: step:{key}:__accept__
+        key = callback.data.split(":")[1]
+        step_index = None
+        for i, step in enumerate(self.steps):
+            if step.key == key:
+                step_index = i
+                break
+        if step_index is not None:
+            await self._advance(callback.message, state, step_index, edit=True)
+
+    # ------------------------------------------------------------------
     # Edit flow
     # ------------------------------------------------------------------
 
@@ -478,6 +525,12 @@ class BaseDialogHandler:
             await callback.answer()
             # callback_data format: step:{key}:{value}
             value = callback.data.split(":", 2)[2]
+
+            # Handle __accept__ — keep pre-filled value, just advance
+            if value == "__accept__":
+                step_index = self._state_to_step[step.state.state]
+                await self._advance(callback.message, state, step_index, edit=True)
+                return
 
             # Handle __custom__ — prompt for text input instead of advancing
             if value == "__custom__" and step.custom_input_prompt:
