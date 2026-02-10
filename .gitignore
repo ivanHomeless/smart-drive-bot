@@ -86,8 +86,6 @@ dmypy.json
 # Temporary files
 *.tmp
 *.bak
-*.swp
-*~
 
 # Docker
 *.env.docker
