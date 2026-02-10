@@ -14,6 +14,8 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 
 COPY alembic.ini .
 COPY alembic/ alembic/
+COPY scripts/ scripts/
 COPY src/ src/
 
-CMD ["python", "-m", "src.main"]
+# Run migrations then start the bot
+CMD ["sh", "-c", "python -m scripts.init_db && python -m src.main"]
