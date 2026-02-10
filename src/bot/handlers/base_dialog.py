@@ -47,6 +47,7 @@ class StepConfig:
     error_text: str = "Некорректный ввод. Попробуйте ещё раз."
     display_label: str = ""
     keyboard_columns: int = 2
+    custom_input_prompt: str | None = None  # Shown when __custom__ button is clicked
 
     def __post_init__(self) -> None:
         if not self.display_label:
@@ -135,6 +136,27 @@ class BaseDialogHandler:
                     F.data.startswith(f"step:{step.key}:"),
                     StateFilter(step.state),
                 )
+                # Also register text handler for hybrid steps (custom input)
+                if step.custom_input_prompt is not None:
+                    self.router.message.register(
+                        self._make_text_handler(step),
+                        F.text,
+                        StateFilter(step.state),
+                    )
+            elif step.step_type == StepType.TEXT_INPUT:
+                self.router.message.register(
+                    self._make_text_handler(step),
+                    F.text,
+                    StateFilter(step.state),
+                )
+                # Also register callback handler if TEXT_INPUT has buttons
+                if step.buttons:
+                    self.router.callback_query.register(
+                        self._make_button_handler(step),
+                        F.data.startswith(f"step:{step.key}:"),
+                        StateFilter(step.state),
+                    )
+                continue
             elif step.step_type == StepType.PHONE_INPUT:
                 # Contact message
                 self.router.message.register(
@@ -159,13 +181,7 @@ class BaseDialogHandler:
                     F.data == f"step:{step.key}:done",
                     StateFilter(step.state),
                 )
-            else:
-                # TEXT_INPUT
-                self.router.message.register(
-                    self._make_text_handler(step),
-                    F.text,
-                    StateFilter(step.state),
-                )
+            # PHOTO_UPLOAD handled above; TEXT_INPUT handled in elif block
 
     # ------------------------------------------------------------------
     # Entry
@@ -221,7 +237,7 @@ class BaseDialogHandler:
     ) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
-        if step.step_type == StepType.BUTTON_SELECT and step.buttons:
+        if step.buttons and step.step_type in (StepType.BUTTON_SELECT, StepType.TEXT_INPUT):
             for label, value in step.buttons:
                 builder.add(
                     InlineKeyboardButton(
@@ -462,6 +478,15 @@ class BaseDialogHandler:
             await callback.answer()
             # callback_data format: step:{key}:{value}
             value = callback.data.split(":", 2)[2]
+
+            # Handle __custom__ — prompt for text input instead of advancing
+            if value == "__custom__" and step.custom_input_prompt:
+                step_index = self._state_to_step[step.state.state]
+                nav_kb = self._build_nav_keyboard(step_index)
+                await callback.message.edit_text(
+                    step.custom_input_prompt, reply_markup=nav_kb
+                )
+                return
 
             # Find label for display
             display_value = value
