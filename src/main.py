@@ -11,6 +11,7 @@ from redis.asyncio import Redis
 from src.bot.handlers import get_main_router
 from src.bot.middlewares.db import DbSessionMiddleware
 from src.bot.middlewares.logging_mw import LoggingMiddleware
+from src.bot.middlewares.throttling import ThrottlingMiddleware
 from src.config import settings
 from src.db.engine import async_session
 
@@ -48,6 +49,7 @@ async def main() -> None:
     dp = Dispatcher(storage=storage)
 
     dp.update.middleware(LoggingMiddleware())
+    dp.update.middleware(ThrottlingMiddleware())
     dp.update.middleware(DbSessionMiddleware(session_pool=async_session))
 
     main_router = get_main_router()
