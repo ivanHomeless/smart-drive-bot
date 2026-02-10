@@ -415,12 +415,32 @@ class BaseDialogHandler:
         data: dict,
         **kwargs: Any,
     ) -> bool:
-        """Process the lead. Override in subclasses or wire LeadProcessor in Phase 6."""
-        logger.info(
-            "Lead submitted: service=%s user=%s data=%s",
+        """Process the lead via LeadProcessor (AmoCRM + DB)."""
+        from src.services.lead_processor import LeadProcessor
+
+        session = kwargs.get("session")
+        lead_processor: LeadProcessor | None = kwargs.get("lead_processor")
+
+        telegram_user = {
+            "id": callback.from_user.id,
+            "username": callback.from_user.username,
+            "first_name": callback.from_user.first_name,
+        }
+
+        if lead_processor and session:
+            return await lead_processor.process(
+                session=session,
+                telegram_user=telegram_user,
+                service_type=self.service_type,
+                data=data,
+            )
+
+        # Fallback: no processor available (e.g. in tests)
+        logger.warning(
+            "LeadProcessor not available, lead not sent to CRM: "
+            "service=%s user=%s",
             self.service_type,
             callback.from_user.id,
-            data,
         )
         return True
 

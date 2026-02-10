@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from aiogram import F, Router
 from aiogram.filters import StateFilter
@@ -12,9 +13,12 @@ from aiogram.types import (
     Message,
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.keyboards.main_menu import get_main_menu_keyboard, WELCOME_TEXT
 from src.bot.states.freetext import FreetextStates
+from src.db.repositories.ai_log import AiLogRepository
+from src.db.repositories.user import UserRepository
 from src.services.openai_client.client import OpenAIClient
 from src.services.openai_client.prompts import ENTITY_KEY_MAPPING, INTENT_TO_SERVICE
 
@@ -88,6 +92,7 @@ async def on_freetext_message(
     message: Message,
     state: FSMContext,
     openai_client: OpenAIClient | None = None,
+    session: AsyncSession | None = None,
 ) -> None:
     data = await state.get_data()
     ai_count = data.get("__ai_count__", 0)
@@ -108,15 +113,48 @@ async def on_freetext_message(
         return
 
     # Classify the message
+    start_time = time.monotonic()
     response = await openai_client.classify(message.text)
+    latency_ms = int((time.monotonic() - start_time) * 1000)
+
     logger.info(
-        "AI classify: user=%d intent=%s confidence=%.2f model=%s fallback=%s",
+        "AI classify: user=%d intent=%s confidence=%.2f model=%s fallback=%s latency=%dms",
         message.from_user.id,
         response.intent,
         response.confidence,
         response.model_used,
         response.used_fallback,
+        latency_ms,
     )
+
+    # Log to DB
+    if session:
+        try:
+            user_repo = UserRepository(session)
+            db_user = await user_repo.create_or_update(
+                telegram_id=message.from_user.id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+            )
+            ai_log_repo = AiLogRepository(session)
+            await ai_log_repo.create(
+                user_id=db_user.id,
+                user_message=message.text[:500],
+                ai_response={
+                    "intent": response.intent,
+                    "confidence": response.confidence,
+                    "entities": response.entities,
+                    "reply": response.reply,
+                },
+                intent=response.intent,
+                confidence=response.confidence,
+                model_used=response.model_used,
+                used_fallback=response.used_fallback,
+                latency_ms=latency_ms,
+            )
+            await session.commit()
+        except Exception:
+            logger.exception("Failed to log AI request to DB")
 
     # High confidence + known service -> suggest branch
     service_type = INTENT_TO_SERVICE.get(response.intent)
