@@ -1,5 +1,19 @@
+from datetime import date
+
 from src.bot.handlers.base_dialog import BaseDialogHandler, StepConfig, StepType
 from src.bot.states.buy import BuyStates
+
+
+def _buy_year_buttons() -> list[tuple[str, str]]:
+    """Generate year-from buttons for buy branch."""
+    current = date.today().year
+    # Show current+1, then every year down 5, then a couple wider gaps
+    years = [current + 1, current, current - 1, current - 2, current - 3,
+             current - 5, current - 8]
+    buttons = [(str(y), str(y)) for y in years]
+    buttons.append(("Любой", "Любой"))
+    buttons.append(("Другой", "__custom__"))
+    return buttons
 
 
 BUDGET_BUTTONS = [
@@ -49,17 +63,7 @@ class BuyHandler(BaseDialogHandler):
             state=BuyStates.year_from,
             prompt_text="Год выпуска от:",
             step_type=StepType.BUTTON_SELECT,
-            buttons=[
-                ("2024", "2024"),
-                ("2023", "2023"),
-                ("2022", "2022"),
-                ("2021", "2021"),
-                ("2020", "2020"),
-                ("2018", "2018"),
-                ("2015", "2015"),
-                ("Любой", "Любой"),
-                ("Другой", "__custom__"),
-            ],
+            buttons=_buy_year_buttons(),
             custom_input_prompt="Введите минимальный год выпуска:",
             keyboard_columns=3,
         ),

@@ -35,6 +35,7 @@ def make_callback(data: str) -> CallbackQuery:
     cb.data = data
     cb.message = MagicMock(spec=Message)
     cb.message.edit_text = AsyncMock()
+    cb.message.edit_reply_markup = AsyncMock()
     cb.message.answer = AsyncMock()
     cb.message.delete = AsyncMock()
     cb.answer = AsyncMock()
@@ -148,8 +149,8 @@ async def test_confirm_reset_yes_clears_state():
     data = await state.get_data()
     assert data == {}
 
-    cb.message.edit_text.assert_called_once()
-    call_text = cb.message.edit_text.call_args[0][0]
+    cb.message.answer.assert_called_once()
+    call_text = cb.message.answer.call_args[0][0]
     assert "Добро пожаловать" in call_text
 
 

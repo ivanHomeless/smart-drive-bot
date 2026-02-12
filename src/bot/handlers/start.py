@@ -36,7 +36,11 @@ async def cmd_menu(message: Message, state: FSMContext) -> None:
 @router.callback_query(lambda c: c.data == "confirm_reset:yes")
 async def confirm_reset_yes(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
-    await callback.message.edit_text(WELCOME_TEXT, reply_markup=get_main_menu_keyboard())
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    await callback.message.answer(WELCOME_TEXT, reply_markup=get_main_menu_keyboard())
     await callback.answer()
 
 

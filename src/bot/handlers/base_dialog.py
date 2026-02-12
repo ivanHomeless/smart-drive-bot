@@ -328,7 +328,20 @@ class BaseDialogHandler:
         current_state = await state.get_state()
         step_index = self._state_to_step.get(current_state, 0)
         if step_index > 0:
-            await self._send_step(callback.message, state, step_index - 1, edit=True)
+            data = await state.get_data()
+            is_editing = bool(data.get("__editing_field__"))
+            if is_editing:
+                # In edit mode, just go back to confirmation
+                await state.update_data(__editing_field__=None)
+                await self._show_confirmation(callback.message, state, edit=True)
+            else:
+                # Remove keyboard from current message
+                step = self.steps[step_index]
+                try:
+                    await callback.message.edit_text(step.prompt_text)
+                except Exception:
+                    pass
+                await self._send_step(callback.message, state, step_index - 1)
 
     async def _on_nav_skip(self, callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer()
@@ -336,7 +349,14 @@ class BaseDialogHandler:
         step_index = self._state_to_step.get(current_state, 0)
         step = self.steps[step_index]
         if not step.required:
-            await self._advance(callback.message, state, step_index, edit=True)
+            # Remove keyboard from current message
+            try:
+                await callback.message.edit_text(
+                    f"{step.prompt_text}\n\n\u23ed Пропущено"
+                )
+            except Exception:
+                pass
+            await self._advance(callback.message, state, step_index)
 
     # ------------------------------------------------------------------
     # Advance logic
@@ -465,7 +485,11 @@ class BaseDialogHandler:
     async def _on_confirm_cancel(self, callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer("Заявка отменена")
         await state.clear()
-        await callback.message.edit_text(WELCOME_TEXT, reply_markup=get_main_menu_keyboard())
+        try:
+            await callback.message.edit_reply_markup(reply_markup=None)
+        except Exception:
+            pass
+        await callback.message.answer(WELCOME_TEXT, reply_markup=get_main_menu_keyboard())
 
     # ------------------------------------------------------------------
     # Accept pre-filled value
@@ -477,12 +501,19 @@ class BaseDialogHandler:
         # callback_data: step:{key}:__accept__
         key = callback.data.split(":")[1]
         step_index = None
+        step_cfg = None
         for i, step in enumerate(self.steps):
             if step.key == key:
                 step_index = i
+                step_cfg = step
                 break
         if step_index is not None:
-            await self._advance(callback.message, state, step_index, edit=True)
+            data = await state.get_data()
+            prefilled = data.get(key, "")
+            await callback.message.edit_text(
+                f"{step_cfg.prompt_text}\n\n\u2705 {prefilled}"
+            )
+            await self._advance(callback.message, state, step_index)
 
     # ------------------------------------------------------------------
     # Edit flow
@@ -545,11 +576,20 @@ class BaseDialogHandler:
             await callback.answer()
             # callback_data format: step:{key}:{value}
             value = callback.data.split(":", 2)[2]
+            data = await state.get_data()
+            is_editing = bool(data.get("__editing_field__"))
 
             # Handle __accept__ — keep pre-filled value, just advance
             if value == "__accept__":
                 step_index = self._state_to_step[step.state.state]
-                await self._advance(callback.message, state, step_index, edit=True)
+                prefilled = data.get(step.key, "")
+                if is_editing:
+                    await self._advance(callback.message, state, step_index, edit=True)
+                else:
+                    await callback.message.edit_text(
+                        f"{step.prompt_text}\n\n\u2705 {prefilled}"
+                    )
+                    await self._advance(callback.message, state, step_index)
                 return
 
             # Handle __custom__ — prompt for text input instead of advancing
@@ -571,7 +611,16 @@ class BaseDialogHandler:
 
             await state.update_data(**{step.key: display_value})
             step_index = self._state_to_step[step.state.state]
-            await self._advance(callback.message, state, step_index, edit=True)
+
+            if is_editing:
+                # Edit flow: replace in place and return to confirmation
+                await self._advance(callback.message, state, step_index, edit=True)
+            else:
+                # Normal flow: show selected value, send next step as new message
+                await callback.message.edit_text(
+                    f"{step.prompt_text}\n\n\u2705 {display_value}"
+                )
+                await self._advance(callback.message, state, step_index)
 
         return handler
 
@@ -615,6 +664,15 @@ class BaseDialogHandler:
         async def handler(callback: CallbackQuery, state: FSMContext) -> None:
             await callback.answer()
             step_index = self._state_to_step[step.state.state]
-            await self._advance(callback.message, state, step_index, edit=True)
+            data = await state.get_data()
+            is_editing = bool(data.get("__editing_field__"))
+            photos = data.get(step.key, [])
+            if is_editing:
+                await self._advance(callback.message, state, step_index, edit=True)
+            else:
+                await callback.message.edit_text(
+                    f"{step.prompt_text}\n\n\u2705 {len(photos)} фото"
+                )
+                await self._advance(callback.message, state, step_index)
 
         return handler

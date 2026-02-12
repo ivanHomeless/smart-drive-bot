@@ -21,6 +21,8 @@ def make_callback(data: str) -> CallbackQuery:
     cb.data = data
     cb.message = MagicMock(spec=Message)
     cb.message.edit_text = AsyncMock()
+    cb.message.edit_reply_markup = AsyncMock()
+    cb.message.answer = AsyncMock()
     cb.answer = AsyncMock()
     return cb
 
@@ -33,8 +35,8 @@ async def test_nav_home_clears_state_and_shows_menu():
     await nav_home(cb, state)
 
     assert await state.get_state() is None
-    cb.message.edit_text.assert_called_once()
-    args, kwargs = cb.message.edit_text.call_args
+    cb.message.answer.assert_called_once()
+    args, kwargs = cb.message.answer.call_args
     assert args[0] == WELCOME_TEXT
     assert "reply_markup" in kwargs
     cb.answer.assert_called_once()

@@ -502,8 +502,8 @@ async def test_confirm_cancel_clears_state():
 
     current = await state.get_state()
     assert current is None
-    cb.message.edit_text.assert_called_once()
-    args = cb.message.edit_text.call_args[0]
+    cb.message.answer.assert_called_once()
+    args = cb.message.answer.call_args[0]
     assert args[0] == WELCOME_TEXT
 
 

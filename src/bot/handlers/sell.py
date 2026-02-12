@@ -1,5 +1,15 @@
+from datetime import date
+
 from src.bot.handlers.base_dialog import BaseDialogHandler, StepConfig, StepType
 from src.bot.states.sell import SellStates
+
+
+def _year_buttons(count: int = 10) -> list[tuple[str, str]]:
+    """Generate year buttons from current+1 down to current+1-count, plus 'Старше'."""
+    current = date.today().year
+    buttons = [(str(y), str(y)) for y in range(current + 1, current + 1 - count, -1)]
+    buttons.append(("Старше", "__custom__"))
+    return buttons
 
 
 def validate_mileage(text: str) -> str | None:
@@ -28,19 +38,7 @@ class SellHandler(BaseDialogHandler):
             state=SellStates.year,
             prompt_text="Выберите год выпуска:",
             step_type=StepType.BUTTON_SELECT,
-            buttons=[
-                ("2024", "2024"),
-                ("2023", "2023"),
-                ("2022", "2022"),
-                ("2021", "2021"),
-                ("2020", "2020"),
-                ("2019", "2019"),
-                ("2018", "2018"),
-                ("2017", "2017"),
-                ("2016", "2016"),
-                ("2015", "2015"),
-                ("Старше", "__custom__"),
-            ],
+            buttons=_year_buttons(10),
             custom_input_prompt="Введите год выпуска:",
             keyboard_columns=3,
         ),
