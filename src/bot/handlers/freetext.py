@@ -41,11 +41,11 @@ API_ERROR_TEXT = (
 )
 
 SERVICE_LABELS = {
-    "sell": "Продать авто",
-    "buy": "Купить авто",
-    "find": "Подбор авто",
-    "check": "Проверка авто",
-    "legal": "Юридическая помощь",
+    "sell": "\U0001f697 Продать авто",
+    "buy": "\U0001f50d Купить авто",
+    "find": "\U0001f3af Подбор авто",
+    "check": "\U0001f527 Проверка авто",
+    "legal": "\u2696\ufe0f Юридическая помощь",
 }
 
 
@@ -55,12 +55,12 @@ def _build_suggestion_keyboard(service_type: str) -> InlineKeyboardMarkup:
     label = SERVICE_LABELS.get(service_type, service_type)
     builder.add(
         InlineKeyboardButton(
-            text=f"Перейти: {label}",
+            text=f"\u27a1\ufe0f Перейти: {label}",
             callback_data=f"ai_suggest:{service_type}",
         )
     )
     builder.add(
-        InlineKeyboardButton(text="В меню", callback_data="nav:home")
+        InlineKeyboardButton(text="\U0001f3e0 В меню", callback_data="nav:home")
     )
     builder.adjust(1)
     return builder.as_markup()
@@ -70,7 +70,7 @@ def _build_continue_keyboard() -> InlineKeyboardMarkup:
     """Build keyboard for continuing freetext chat."""
     builder = InlineKeyboardBuilder()
     builder.add(
-        InlineKeyboardButton(text="В меню", callback_data="nav:home")
+        InlineKeyboardButton(text="\U0001f3e0 В меню", callback_data="nav:home")
     )
     return builder.as_markup()
 
@@ -217,7 +217,7 @@ async def on_ai_suggest_accept(callback: CallbackQuery, state: FSMContext) -> No
     label = SERVICE_LABELS.get(service_type, service_type)
     builder.add(
         InlineKeyboardButton(
-            text=f"Начать: {label}",
+            text=f"\u2705 Начать: {label}",
             callback_data=f"service:{service_type}",
         )
     )

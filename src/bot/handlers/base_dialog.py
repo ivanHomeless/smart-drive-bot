@@ -55,7 +55,7 @@ class StepConfig:
 
 
 SUCCESS_TEXT = (
-    "Спасибо! Ваша заявка принята.\n\n"
+    "\u2705 Спасибо! Ваша заявка принята.\n\n"
     "Наш менеджер свяжется с вами в ближайшее время.\n"
     "Если у вас появятся вопросы -- нажмите /start"
 )
@@ -242,7 +242,7 @@ class BaseDialogHandler:
             if step.step_type == StepType.PHONE_INPUT:
                 # Send reply keyboard with contact button, plus inline nav
                 reply_kb = ReplyKeyboardMarkup(
-                    keyboard=[[KeyboardButton(text="Поделиться контактом", request_contact=True)]],
+                    keyboard=[[KeyboardButton(text="\U0001f4f1 Поделиться контактом", request_contact=True)]],
                     resize_keyboard=True,
                     one_time_keyboard=True,
                 )
@@ -261,7 +261,7 @@ class BaseDialogHandler:
         if has_prefill:
             builder.add(
                 InlineKeyboardButton(
-                    text="Принять",
+                    text="\u2705 Принять",
                     callback_data=f"step:{step.key}:__accept__",
                 )
             )
@@ -280,7 +280,7 @@ class BaseDialogHandler:
         if step.step_type == StepType.PHOTO_UPLOAD:
             builder.add(
                 InlineKeyboardButton(
-                    text="Готово",
+                    text="\u2705 Готово",
                     callback_data=f"step:{step.key}:done",
                 )
             )
@@ -308,14 +308,14 @@ class BaseDialogHandler:
         buttons = []
         if step_index > 0:
             buttons.append(
-                InlineKeyboardButton(text="Назад", callback_data="nav:back")
+                InlineKeyboardButton(text="\u2b05\ufe0f Назад", callback_data="nav:back")
             )
         buttons.append(
-            InlineKeyboardButton(text="В начало", callback_data="nav:home")
+            InlineKeyboardButton(text="\U0001f3e0 В начало", callback_data="nav:home")
         )
         if not step.required:
             buttons.append(
-                InlineKeyboardButton(text="Пропустить", callback_data="nav:skip")
+                InlineKeyboardButton(text="\u23ed Пропустить", callback_data="nav:skip")
             )
         return buttons
 

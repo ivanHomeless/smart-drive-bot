@@ -32,18 +32,18 @@ FIELD_LABELS = {
 
 def format_confirmation(service_type: str, data: dict) -> str:
     """Format collected data for the confirmation screen."""
-    lines = ["Ваша заявка:\n"]
+    lines = ["\U0001f4cb Ваша заявка:\n"]
     service_label = SERVICE_TYPE_LABELS.get(service_type, service_type)
-    lines.append(f"Услуга: {service_label}")
+    lines.append(f"\U0001f539 Услуга: {service_label}")
 
     for key, value in data.items():
         if key.startswith("__") or value is None:
             continue
         label = FIELD_LABELS.get(key, key)
         if key == "photos" and isinstance(value, list):
-            lines.append(f"{label}: {len(value)} шт.")
+            lines.append(f"\U0001f539 {label}: {len(value)} шт.")
         else:
-            lines.append(f"{label}: {value}")
+            lines.append(f"\U0001f539 {label}: {value}")
 
     lines.append("\nВсё верно?")
     return "\n".join(lines)

@@ -43,12 +43,13 @@ async def test_start_shows_welcome_and_menu():
     keyboard = kwargs["reply_markup"]
     buttons = [btn.text for row in keyboard.inline_keyboard for btn in row]
     assert len(buttons) == 6
-    assert "Продать авто" in buttons
-    assert "Купить авто" in buttons
-    assert "Подбор авто" in buttons
-    assert "Проверка авто" in buttons
-    assert "Юридическая помощь" in buttons
-    assert "Задать вопрос" in buttons
+    button_texts = " ".join(buttons)
+    assert "Продать авто" in button_texts
+    assert "Купить авто" in button_texts
+    assert "Подбор авто" in button_texts
+    assert "Проверка авто" in button_texts
+    assert "Юридическая помощь" in button_texts
+    assert "Задать вопрос" in button_texts
 
 
 @pytest.mark.asyncio

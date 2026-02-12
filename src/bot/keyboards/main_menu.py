@@ -5,12 +5,12 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 def get_main_menu_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     buttons = [
-        ("Продать авто", "service:sell"),
-        ("Купить авто", "service:buy"),
-        ("Подбор авто", "service:find"),
-        ("Проверка авто", "service:check"),
-        ("Юридическая помощь", "service:legal"),
-        ("Задать вопрос", "service:freetext"),
+        ("\U0001f697 Продать авто", "service:sell"),
+        ("\U0001f50d Купить авто", "service:buy"),
+        ("\U0001f3af Подбор авто", "service:find"),
+        ("\U0001f527 Проверка авто", "service:check"),
+        ("\u2696\ufe0f Юридическая помощь", "service:legal"),
+        ("\U0001f4ac Задать вопрос", "service:freetext"),
     ]
     for label, callback in buttons:
         builder.add(InlineKeyboardButton(text=label, callback_data=callback))
@@ -19,7 +19,7 @@ def get_main_menu_keyboard() -> InlineKeyboardMarkup:
 
 
 WELCOME_TEXT = (
-    "Добро пожаловать в CarQuery AI!\n\n"
+    "\U0001f44b Добро пожаловать в CarQuery AI!\n\n"
     "Мы помогаем с покупкой, продажей, подбором\n"
     "и проверкой автомобилей, а также с юридическими вопросами.\n\n"
     "Выберите, что вас интересует:"
