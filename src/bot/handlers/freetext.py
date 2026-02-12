@@ -81,7 +81,11 @@ async def on_freetext_entry(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(FreetextStates.chatting)
     await state.update_data(__ai_count__=0)
-    await callback.message.edit_text(
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    await callback.message.answer(
         "Задайте ваш вопрос, и я постараюсь помочь:",
         reply_markup=_build_continue_keyboard(),
     )
