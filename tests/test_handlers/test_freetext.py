@@ -94,7 +94,8 @@ async def test_freetext_entry():
     assert current == FreetextStates.chatting.state
     data = await state.get_data()
     assert data["__ai_count__"] == 0
-    cb.message.edit_text.assert_called_once()
+    cb.message.edit_reply_markup.assert_called_once()
+    cb.message.answer.assert_called_once()
 
 
 # ---------------------------------------------------------------
@@ -125,9 +126,10 @@ async def test_freetext_high_confidence_suggests_branch():
     assert "Понял" in call_text
     assert "оформлению" in call_text
 
-    # Check pre-fill data stored
+    # Check pre-fill data stored (sell: brand+model combined, budget->price)
     data = await state.get_data()
-    assert data["__ai_prefill__"]["car_brand"] == "Toyota"
+    assert data["__ai_prefill__"]["car_brand"] == "Toyota Camry"
+    assert "car_model" not in data["__ai_prefill__"]
     assert data["__ai_service__"] == "sell"
 
 

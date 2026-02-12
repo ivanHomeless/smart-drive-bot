@@ -204,6 +204,11 @@ class BaseDialogHandler:
             prefill = {k: v for k, v in existing_data.items() if not k.startswith("__")}
             if prefill:
                 await state.update_data(**prefill)
+        # Remove buttons from the old message so stale menus don't stay active
+        try:
+            await callback.message.edit_reply_markup(reply_markup=None)
+        except Exception:
+            pass
         await self._send_step(callback.message, state, 0)
 
     # ------------------------------------------------------------------

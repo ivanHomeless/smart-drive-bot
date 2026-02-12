@@ -20,7 +20,7 @@ from src.bot.states.freetext import FreetextStates
 from src.db.repositories.ai_log import AiLogRepository
 from src.db.repositories.user import UserRepository
 from src.services.openai_client.client import OpenAIClient
-from src.services.openai_client.prompts import ENTITY_KEY_MAPPING, INTENT_TO_SERVICE
+from src.services.openai_client.prompts import INTENT_TO_SERVICE, get_entity_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -163,12 +163,22 @@ async def on_freetext_message(
     # High confidence + known service -> suggest branch
     service_type = INTENT_TO_SERVICE.get(response.intent)
     if response.is_high_confidence and service_type:
-        # Store extracted entities for pre-fill
+        # Store extracted entities for pre-fill (service-aware mapping)
+        entity_mapping = get_entity_mapping(service_type)
         prefill = {}
-        for ai_key, step_key in ENTITY_KEY_MAPPING.items():
+        for ai_key, step_key in entity_mapping.items():
             value = response.entities.get(ai_key)
             if value:
                 prefill[step_key] = str(value)
+
+        # For sell: combine brand + model into car_brand field
+        if service_type == "sell" and "car_model" in prefill:
+            brand = prefill.get("car_brand", "")
+            model = prefill.pop("car_model")
+            if brand:
+                prefill["car_brand"] = f"{brand} {model}"
+            else:
+                prefill["car_brand"] = model
 
         await state.update_data(__ai_prefill__=prefill, __ai_service__=service_type)
 
